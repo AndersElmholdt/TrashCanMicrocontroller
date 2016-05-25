@@ -12,14 +12,14 @@
 #define DOUT  12
 #define CLK  11
 #define TRIGGER 4
-#define RED 3
+#define RED 6
 #define GREEN 5
-#define BLUE 6
+#define BLUE 3                 
 #define SENSOR_NUM 4
-#define THRESHOLD_A 40
-#define THRESHOLD_B 40
-#define THRESHOLD_C 40
-#define THRESHOLD_D 40
+#define THRESHOLD_A 27
+#define THRESHOLD_B 2
+#define THRESHOLD_C 27
+#define THRESHOLD_D 27
 
 bool hasChanged = true;
 double weight = 0.0;
@@ -40,6 +40,7 @@ float* distance;
 long redTimer = 0;
 long blueTimer = 0;
 long greenTimer = 0;
+long ledTimer = 0;
 
 HX711 scale(DOUT, CLK);
 
@@ -63,6 +64,7 @@ void setup() {
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);
   pinMode(BLUE, OUTPUT);
+  pinMode(2, OUTPUT);
 
   // starts the serial
   Serial.begin(115200); 
@@ -95,12 +97,18 @@ void loop() {
   } else {
     digitalWrite(GREEN, LOW);
   }
+  if (ledTimer > millis()) {
+    digitalWrite(2, HIGH);
+  } else {
+    digitalWrite(2, LOW);
+  }
   
   if (fuckingWithTheSystem == false){
    if (objectDetected() == true) {
      if (!hasChanged) {
       Serial.println("f,0.0,Coffee");
       redTimer = millis() + 1000;
+      ledTimer = millis() + 1000;
      }
      else{
       hasChanged = false;
@@ -120,8 +128,8 @@ void loop() {
  }
 
  if (!hasChanged) {
-   if (((calculateWeight() - trashThreshold) > weight && (millis() - counter) > 700) ||
-       (millis() - counter >= 1000)) {
+   if (((calculateWeight() - trashThreshold) > weight && (millis() - counter) > 100) ||
+       (millis() - counter >= 200)) {
      float added = (calculateWeight() - weight);
      if(added < 0){
       added = 0;
@@ -129,6 +137,7 @@ void loop() {
      Serial.print("f,");
      Serial.print(added);
      Serial.println(",Coffee");
+     ledTimer = millis() + 1000;
      redTimer = millis() + 1000;
      hasChanged = true;
    }
@@ -136,26 +145,38 @@ void loop() {
 
   // request data from the first arduino
   String msg = "";
-  Wire.requestFrom(1,10);
+  Wire.requestFrom(8,10);
   while (Wire.available()){
    char c = Wire.read();
-   msg += c;
-   greenTimer = millis() + 1000;
+   if (c != (char)255) {
+    msg += c;
+   }
   }
-  Serial.println(msg);
+  if (!msg.equals("")) {
+    greenTimer = millis() + 1000;
+    Serial.print("o,");
+    Serial.print(msg);
+    Serial.println(",Coffee");
+  }
 
   // request data from the second arduino
   msg = "";
-  Wire.requestFrom(2,10);
+  Wire.requestFrom(9,10);
   while (Wire.available()){
    char c = Wire.read();
-   msg += c;
-   blueTimer = millis() + 1000;
+   if (c != (char)255) {
+    msg += c;
+   }
   }
-  Serial.println(msg);
+  if (!msg.equals("")) {
+    blueTimer = millis() + 1000;
+    Serial.print("c,");
+    Serial.print(msg);
+    Serial.println(",Coffee");
+  }
 
-  // wait 1 millisecond
-  delay(1);
+  // wait 25 milliseconds
+  delay(25);
 }
 
 bool objectDetected(){

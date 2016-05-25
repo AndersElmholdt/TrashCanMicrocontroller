@@ -5,10 +5,10 @@
 #include <Wire.h>
 
 // outcomment this line to enable debugging mode
-//#define DEBUG
+#define DEBUG
 
 // set this to 1 or 2, determines the current arduinos ID
-#define ARDUINO_NUM 1
+#define ARDUINO_NUM 8
 
 #define calibration_factor 25050.0
 #define WEIGHTDELAY 10
@@ -16,10 +16,10 @@
 #define CLK  11
 #define TRIGGER 4
 #define SENSOR_NUM 4
-#define THRESHOLD_A 40
-#define THRESHOLD_B 40
-#define THRESHOLD_C 40
-#define THRESHOLD_D 40
+#define THRESHOLD_A 28
+#define THRESHOLD_B 28
+#define THRESHOLD_C 28
+#define THRESHOLD_D 28
 
 bool hasChanged = true;
 double weight = 0.0;
@@ -38,6 +38,7 @@ int detectTime = 0;
 int fuckingTime = 0;
 float* distance;
 String output = "";
+long ledTimer = 0;
 
 HX711 scale(DOUT, CLK);
 
@@ -56,6 +57,7 @@ float calculateWeight();
 void setup() {
   // initializes the communication between arduinos
   Wire.begin(ARDUINO_NUM);
+  Wire.onRequest(requestEvent);
 
   // starts the serial
   Serial.begin(115200); 
@@ -69,9 +71,17 @@ void setup() {
 
   // initializes the sensor
   sensor.begin();
+
+  pinMode(2, OUTPUT);
 }
 
 void loop() {
+  if (ledTimer > millis()) {
+    digitalWrite(2, HIGH);
+  } else {
+    digitalWrite(2, LOW);
+  }
+  
   if (fuckingWithTheSystem == false){
    if (objectDetected() == true) {
      if (!hasChanged) {
@@ -95,19 +105,20 @@ void loop() {
  }
 
  if (!hasChanged) {
-   if (((calculateWeight() - trashThreshold) > weight && (millis() - counter) > 700) ||
-       (millis() - counter >= 1000)) {
+   if (((calculateWeight() - trashThreshold) > weight && (millis() - counter) > 200) ||
+       (millis() - counter >= 400)) {
      float added = (calculateWeight() - weight);
      if(added < 0){
       added = 0;
      }
      output = added;
+     ledTimer = millis() + 1000;
      hasChanged = true;
    }
  }
 
-  // wait 1 millisecond
-  delay(1);
+  // wait 25 milliseconds
+  delay(25);
 }
 
 bool objectDetected(){
